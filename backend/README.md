@@ -1,4 +1,4 @@
-# AgroSurplus backend
+# AgriNova backend
 
 ## Run locally on Windows
 

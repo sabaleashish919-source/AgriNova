@@ -1,5 +1,5 @@
-name: agrosurplus
-description: Smart agricultural surplus marketplace.
+name: agrinova
+description: AgriNova agricultural marketplace connecting farmers, consumers and international buyers.
 publish_to: "none"
 
 version: 1.0.0+1
@@ -41,3 +41,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/agrinova_logo.png

@@ -33,14 +33,14 @@ from sqlalchemy.orm import (
 # ============================================================
 
 SECRET_KEY = os.getenv(
-    "AGROSURPLUS_SECRET_KEY",
+    "AGRINOVA_SECRET_KEY",
     "CHANGE_THIS_IN_PRODUCTION",
 )
 
 ALGORITHM = "HS256"
 
 DB_URL = os.getenv(
-    "AGROSURPLUS_DB_URL",
+    "AGRINOVA_DB_URL",
     "sqlite:///./agrosurplus.db",
 )
 
@@ -56,7 +56,7 @@ DB_URL = os.getenv(
 # Change this value later when we build the admin demand-management screen.
 DOMESTIC_DEMAND_ESTIMATE_KG = float(
     os.getenv(
-        "AGROSURPLUS_DOMESTIC_DEMAND_KG",
+        "AGRINOVA_DOMESTIC_DEMAND_KG",
         "5000",
     )
 )
@@ -66,7 +66,7 @@ DOMESTIC_DEMAND_ESTIMATE_KG = float(
 # 0.20 = 20%
 SURPLUS_THRESHOLD = float(
     os.getenv(
-        "AGROSURPLUS_SURPLUS_THRESHOLD",
+        "AGRINOVA_SURPLUS_THRESHOLD",
         "0.20",
     )
 )
@@ -451,7 +451,7 @@ class OfferOut(BaseModel):
 # ============================================================
 
 app = FastAPI(
-    title="AgroSurplus API",
+    title="AgriNova API",
     version="1.0.0",
 )
 
@@ -473,7 +473,7 @@ app.add_middleware(
 def health():
     return {
         "status": "ok",
-        "service": "AgroSurplus API",
+        "service": "AgriNova API",
     }
 
 

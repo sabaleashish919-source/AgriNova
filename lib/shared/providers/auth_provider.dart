@@ -93,7 +93,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Logs the user into the AgroSurplus backend.
+  /// Logs the user into the AgriNova backend.
   Future<bool> login(
     String email,
     String password,

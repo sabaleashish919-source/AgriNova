@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/widgets/brand_logo.dart';
 import '../../../../shared/providers/auth_provider.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -132,6 +133,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
+            const Center(child: BrandLogo(height: 95)),
+            const SizedBox(height: 12),
             TextField(
               controller: nameController,
               textInputAction: TextInputAction.next,

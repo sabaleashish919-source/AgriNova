@@ -1,4 +1,4 @@
-# AgroSurplus
+# AgriNova
 
 Smart agricultural surplus marketplace MVP.
 
