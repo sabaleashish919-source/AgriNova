@@ -44,16 +44,43 @@ DB_URL = os.getenv(
     "sqlite:///./agrosurplus.db",
 )
 
+
+# ============================================================
+# DATABASE ENGINE
+# ============================================================
+
+# SQLAlchemy + psycopg3 compatibility.
+if DB_URL.startswith("postgresql://"):
+    DB_URL = DB_URL.replace(
+        "postgresql://",
+        "postgresql+psycopg://",
+        1,
+    )
+
+if DB_URL.startswith("postgres://"):
+    DB_URL = DB_URL.replace(
+        "postgres://",
+        "postgresql+psycopg://",
+        1,
+    )
+
+
+# SQLite requires check_same_thread.
+# PostgreSQL must NOT receive this option.
+if DB_URL.startswith("sqlite"):
+    engine = create_engine(
+        DB_URL,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    engine = create_engine(DB_URL)
+
+
+# ============================================================
+# MARKET CONFIGURATION
+# ============================================================
+
 # Default domestic demand estimate per crop.
-#
-# Example:
-# If wheat supply = 5,000 kg and estimated domestic demand = 5,000 kg:
-#
-# surplus = 0 kg
-# surplus percentage = 0%
-# international market = CLOSED
-#
-# Change this value later when we build the admin demand-management screen.
 DOMESTIC_DEMAND_ESTIMATE_KG = float(
     os.getenv(
         "AGRINOVA_DOMESTIC_DEMAND_KG",
@@ -61,7 +88,8 @@ DOMESTIC_DEMAND_ESTIMATE_KG = float(
     )
 )
 
-# International marketplace opens only when surplus reaches this percentage.
+# International marketplace opens when surplus
+# reaches this percentage.
 #
 # 0.20 = 20%
 SURPLUS_THRESHOLD = float(
@@ -75,11 +103,6 @@ SURPLUS_THRESHOLD = float(
 # ============================================================
 # DATABASE
 # ============================================================
-
-engine = create_engine(
-    DB_URL,
-    connect_args={"check_same_thread": False},
-)
 
 SessionLocal = sessionmaker(
     bind=engine,
@@ -277,6 +300,10 @@ class Offer(Base):
     )
 
 
+# ============================================================
+# CREATE DATABASE TABLES
+# ============================================================
+
 Base.metadata.create_all(engine)
 
 
@@ -456,9 +483,29 @@ app = FastAPI(
 )
 
 
+# ============================================================
+# CORS
+# ============================================================
+
+# Local development origins by default.
+# For production, set:
+#
+# AGRINOVA_ALLOWED_ORIGINS=https://your-domain.com
+#
+# Multiple origins can be comma-separated.
+
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "AGRINOVA_ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000",
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -593,14 +640,19 @@ def calculate_crop_market_status(
     Domestic demand is represented by the configurable MVP
     estimate plus actual completed/pending domestic orders.
 
-    The international market opens when:
+    International market opens when:
 
         surplus / domestic_demand >= threshold
     """
 
     supply = (
         session
-        .query(func.coalesce(func.sum(Product.quantity_kg), 0.0))
+        .query(
+            func.coalesce(
+                func.sum(Product.quantity_kg),
+                0.0,
+            )
+        )
         .filter(
             Product.active.is_(True),
             Product.crop_name == crop_name,
@@ -611,20 +663,31 @@ def calculate_crop_market_status(
 
     domestic_orders = (
         session
-        .query(func.coalesce(func.sum(Order.quantity_kg), 0.0))
+        .query(
+            func.coalesce(
+                func.sum(Order.quantity_kg),
+                0.0,
+            )
+        )
         .join(
             Product,
             Order.product_id == Product.id,
         )
         .filter(
             Product.crop_name == crop_name,
-            Order.status.in_(["PENDING", "CONFIRMED", "COMPLETED"]),
+            Order.status.in_(
+                [
+                    "PENDING",
+                    "CONFIRMED",
+                    "COMPLETED",
+                ]
+            ),
         )
         .scalar()
         or 0.0
     )
 
-    # We always retain the configured domestic market estimate.
+    # Always retain the configured domestic market estimate.
     domestic_demand = max(
         DOMESTIC_DEMAND_ESTIMATE_KG,
         float(domestic_orders),
@@ -732,8 +795,7 @@ def products(
             Product.export_only.is_(True)
         )
 
-    # Domestic consumers should not see export-only products
-    # as normal buyable products.
+    # Domestic consumers should not see export-only products.
     if user.role == "CONSUMER":
         query = query.filter(
             Product.export_only.is_(False)
@@ -972,7 +1034,7 @@ def create_order(
             detail="Order quantity must be greater than zero",
         )
 
-    # Recalculate market status before allowing the purchase.
+    # Recalculate market status before allowing purchase.
     refresh_export_flags(session)
 
     product = session.get(
@@ -1040,7 +1102,7 @@ def create_order(
     session.commit()
     session.refresh(order)
 
-    # Recalculate after the purchase.
+    # Recalculate after purchase.
     refresh_export_flags(session)
 
     return order
@@ -1224,13 +1286,13 @@ def make_offer(
     if data.quantity_kg <= 0:
         raise HTTPException(
             status_code=422,
-            detail="Quantity must be greater than zero",
+            detail="Offer quantity must be greater than zero",
         )
 
     if data.price_per_kg <= 0:
         raise HTTPException(
             status_code=422,
-            detail="Price must be greater than zero",
+            detail="Offer price must be greater than zero",
         )
 
     refresh_export_flags(session)
